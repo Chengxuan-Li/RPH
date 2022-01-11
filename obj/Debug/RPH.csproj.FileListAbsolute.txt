@@ -1,0 +1,6 @@
+C:\Users\liche\source\repos\RPH\bin\RPH.dll
+C:\Users\liche\source\repos\RPH\bin\RPH.pdb
+C:\Users\liche\source\repos\RPH\obj\Debug\RPH.csproj.AssemblyReference.cache
+C:\Users\liche\source\repos\RPH\obj\Debug\RPH.csproj.CoreCompileInputs.cache
+C:\Users\liche\source\repos\RPH\obj\Debug\RPH.dll
+C:\Users\liche\source\repos\RPH\obj\Debug\RPH.pdb
