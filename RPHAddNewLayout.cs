@@ -16,6 +16,7 @@ public enum selection
     sel2,
     selotr
 }
+
 namespace RPH
 {
     public class RPHAddNewLayout : Command
@@ -60,7 +61,15 @@ namespace RPH
                 layout_options.AddOptionEnumList("etrrrsdaas", selection.sel1);
                 layout_options.SetCommandPrompt("abcd");
 
-                layout_options.Get();
+                GetResult result = layout_options.Get();
+                string msg = layout_options.OptionIndex().ToString();
+
+                Rhino.UI.SaveFileDialog save = new Rhino.UI.SaveFileDialog();
+                save.Title = msg;
+                save.Filter = ".pdf";
+                save.ShowSaveDialog();
+
+                
                 // ask for page size
 
 
