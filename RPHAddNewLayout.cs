@@ -1,7 +1,21 @@
 ﻿using Rhino;
 using Rhino.Commands;
+using Rhino.Geometry;
+using Rhino.Input;
+using Rhino.Input.Custom;
 using System;
+using System.IO;
+using Rhino.Collections;
+using System.Collections.Generic;
 
+
+
+public enum selection
+{
+    sel1,
+    sel2,
+    selotr
+}
 namespace RPH
 {
     public class RPHAddNewLayout : Command
@@ -23,13 +37,57 @@ namespace RPH
             get { return "RPHAddNewLayout"; }
         }
 
+
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {
 
             Rhino.Display.RhinoPageView[] page_views = doc.Views.GetPageViews();
-            
-            // check whether all existing layouts are created with RPH
 
+            ArchivableDictionary layout_info = new ArchivableDictionary();
+
+            Boolean choosing_layout_options = true;
+
+            // ask for options
+
+
+            while (choosing_layout_options)
+            {
+                var layout_options = new Rhino.Input.Custom.GetOption();
+
+
+                layout_options.AddOptionEnumList("etrrr", selection.sel1);
+
+                layout_options.AddOptionEnumList("etrrrsdaas", selection.sel1);
+                layout_options.SetCommandPrompt("abcd");
+
+                layout_options.Get();
+                // ask for page size
+
+
+
+
+                // ask for position
+
+
+
+                // ask for justification
+                choosing_layout_options = false;
+            }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+            // check whether all existing layouts are created with RPH
 
             // return messages if not all layouts are created with RPH
 
