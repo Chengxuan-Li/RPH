@@ -51,14 +51,17 @@ namespace RPH
             // ask for options
 
 
+            RPHLayoutSettings settings = new RPHLayoutSettings("test_string");
+
             while (choosing_layout_options)
             {
                 var layout_options = new Rhino.Input.Custom.GetOption();
 
 
-                layout_options.AddOptionEnumList("etrrr", selection.sel1);
+                
 
-                layout_options.AddOptionEnumList("etrrrsdaas", selection.sel1);
+                layout_options.AddOptionEnumList(settings.GetId(), selection.sel1);
+                
                 layout_options.SetCommandPrompt("abcd");
 
                 GetResult result = layout_options.Get();
@@ -109,6 +112,19 @@ namespace RPH
             // adjust detail view position and scale
 
             return Result.Success;
+        }
+    }
+    public class RPHLayoutSettings
+    {   
+        private string txt;
+        public RPHLayoutSettings(string txtt)
+        {
+            this.txt = txtt;
+        }
+        
+        public string GetId()
+        {
+            return this.txt;
         }
     }
 }
