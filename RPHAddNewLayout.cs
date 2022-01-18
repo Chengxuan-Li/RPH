@@ -110,7 +110,7 @@ namespace RPH
                         {
                             case 1:
                                 GetPoint get_point = new GetPoint();
-                                get_point.SetCommandPrompt("Specify a Point");s
+                                get_point.SetCommandPrompt("Specify a Point");
                                 get_point.AddOptionEnumList("Justification", justification.bottom_right);
                                 int i = -999;
                                 while (true)
@@ -118,7 +118,7 @@ namespace RPH
                                     get_point.Get();
                                     
                                     //fixthis
-                                    if (i) )
+                                    if (get_point.Result() == GetResult.Point)
                                     {
                                         Point3d pt = get_point.Point();
                                         settings.SetLayoutOrigin(pt);
@@ -126,7 +126,10 @@ namespace RPH
                                         break;
                                         
                                     }
-                                    
+                                    if (get_point.Result() == GetResult.Option)
+                                    {
+                                        
+                                    }
 
                                 }
                                 break;
