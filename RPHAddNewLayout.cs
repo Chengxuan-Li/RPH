@@ -10,12 +10,41 @@ using System.Collections.Generic;
 
 
 
-public enum selection
+public enum layout_options_general
 {
-    sel1,
-    sel2,
-    selotr
+    position,
+    paper,
+    scale,
+    name,
+    edge,
+    custom_ttributes
 }
+
+public enum layout_options_position
+{
+    from_point,
+    from_rectangle
+}
+
+public enum layout_options_paper
+{
+    iso_paper_sizes,
+    custom_paper_sizes
+}
+
+public enum layout_options_name
+{
+    layout_name,
+    drawing_name,
+    drawing_alternative_name
+}
+
+public enum layout_options_edge
+{
+    drawing_edge_mm,
+    printing_edge_mm
+}
+
 
 namespace RPH
 {
@@ -38,37 +67,55 @@ namespace RPH
             get { return "RPHAddNewLayout"; }
         }
 
-
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {
 
             Rhino.Display.RhinoPageView[] page_views = doc.Views.GetPageViews();
 
-            ArchivableDictionary layout_info = new ArchivableDictionary();
-
             Boolean choosing_layout_options = true;
 
             // ask for options
 
-
-            RPHLayoutSettings settings = new RPHLayoutSettings("test_string");
+            RPHLayoutSettings settings = new RPHLayoutSettings();
 
             while (choosing_layout_options)
             {
-                var layout_options = new Rhino.Input.Custom.GetOption();
 
+                List<string> layout_options_general = new List<string> { "Position", "Paper", "Scale", "Name", "Edge", "User_Attributes" };
+                List<string> layout_options_general_defaults = new List<string> { "Origin", "A3", "1:100", "Default", "Default", "Default_User_Attributes" };
+
+                LayoutOptionDialog layout_options_dialog_general = new LayoutOptionDialog("Layout Settings:", layout_options_general, layout_options_general_defaults);
+                
+                
+                
+                int choice_index = layout_options_dialog_general.GetChoiceIndex();
+                
+
+                switch(choice_index)
+                {
+                    case 1:
+                        List<string> layout_options_position = new List<string> { "From_Point", "From_Rectangle" };
+                        LayoutOptionDialog layout_options_dialog_position = new LayoutOptionDialog("Specify Layout Position:", layout_options_position);
+
+                        break;
+
+                    case 2:
+                        break;
+                        
+      
+
+                }
+
+                // fix
+                //layout_options.AddOptionEnumList("General Layout Options:", );
 
                 
 
-                layout_options.AddOptionEnumList(settings.GetId(), selection.sel1);
-                
-                layout_options.SetCommandPrompt("abcd");
-
-                GetResult result = layout_options.Get();
-                string msg = layout_options.OptionIndex().ToString();
+                //GetResult result = layout_options.Get();
+                //string msg = layout_options.OptionIndex().ToString();
 
                 Rhino.UI.SaveFileDialog save = new Rhino.UI.SaveFileDialog();
-                save.Title = msg;
+                //save.Title = choice_index.ToString();
                 save.Filter = ".pdf";
                 save.ShowSaveDialog();
 
@@ -417,7 +464,57 @@ namespace RPH
             return this.layout_settings;
         }
     }
+
+    public class LayoutOptionDialog
+    {
+        private GetOption option = new Rhino.Input.Custom.GetOption();
+
+        private List<string> option_names;
+        private List<string> option_defaults;
+        private List<int> option_indices = new List<int>();
+        private string msg;
+
+        private int choice_index;
+
+        public LayoutOptionDialog(string msg, List<string> option_names, List<string> option_defaults)
+        {
+            this.msg = msg;
+            this.option_names = option_names;
+            this.option_defaults = option_defaults;
+
+            this.option.SetCommandPrompt(msg);
+            for (int i = 0; i < this.option_names.Count; i++)
+            {
+                this.option.AddOption(this.option_names[i], this.option_defaults[i]);
+                this.option_indices.Add(i);
+            }
+            this.option.Get();
+            this.choice_index = this.option.Option().Index;
+        }
+
+        public LayoutOptionDialog(string msg, List<string> option_names)
+        {
+            this.msg = msg;
+            this.option_names = option_names;
+
+            this.option.SetCommandPrompt(msg);
+            for (int i = 0; i < this.option_names.Count; i++)
+            {
+                this.option.AddOption(this.option_names[i]);
+                this.option_indices.Add(i);
+            }
+            this.option.Get();
+            this.choice_index = this.option.Option().Index;
+        }
+
+        public int GetChoiceIndex()
+        {
+            return this.choice_index;
+        }
+    }
 }
+
+
 
 
 /*
