@@ -115,19 +115,311 @@ namespace RPH
         }
     }
     public class RPHLayoutSettings
-    {   
-        private string txt;
-        public RPHLayoutSettings(string txtt)
+    {
+        // paper settings
+        public string paper_size_name;
+        public double paper_width;
+        public double paper_height;
+        public bool is_landscape;
+
+        // plotting settings
+        public double scale;
+        public bool drawing_elements_scaling;
+
+        // layout settings
+        public int layout_id;
+        public string layout_name;
+        public Point3d layout_origin;
+        public Plane layout_plane;
+        public double model_width;
+        public double model_height;
+        public Rectangle3d layout_boundingbox;
+
+        // drawing settings
+        public string drawing_name;
+        public string drawing_alt_name;
+        public double printing_edge;
+        public double drawing_edge;
+
+        // attribute settings
+        public ExtendedArchivableDictionary user_dictionary;
+
+        // private variables
+        // private Vector3d unit_x = new Vector3d(1, 0, 0);
+        private Vector3d layout_x = new Vector3d(1, 0, 0);
+
+        public RPHLayoutSettings()
         {
-            this.txt = txtt;
+            // default settings
+            this.paper_size_name = "A3";
+            this.paper_width = 420;
+            this.paper_height = 297;
+            UpdatePageOrientation();
+            UpdateModelDimensions();
+
+            this.scale = 100;
+            this.drawing_elements_scaling = true;
+
+            this.layout_id = 0;
+            this.layout_name = "Default Layout";
+            this.layout_origin = new Point3d(0, 0, 0);
+            UpdateLayoutPlane();
+            UpdateLayoutBoundingBox();
+
+            this.drawing_name = "Default Drawing";
+            this.drawing_alt_name = "Default Drawing Alt Name";
+            this.printing_edge = 3;
+            this.drawing_edge = 10;
+            
+        }
+
+        public void SetPaperSize(int code)
+        {
+            switch (code)
+            {
+                case 0:
+                    this.paper_size_name = "A0";
+                    this.paper_width = 1189;
+                    this.paper_height = 841;
+                    break;
+
+                case 1:
+                    this.paper_size_name = "A1";
+                    this.paper_width = 841;
+                    this.paper_height = 594;
+                    break;
+
+                case 2:
+                    this.paper_size_name = "A2";
+                    this.paper_width = 594;
+                    this.paper_height = 420;
+                    break;
+
+                case 3:
+                    this.paper_size_name = "A3";
+                    this.paper_width = 420;
+                    this.paper_height = 297;
+                    break;
+
+                case 4:
+                    this.paper_size_name = "A4";
+                    this.paper_width = 297;
+                    this.paper_height = 210;
+                    break;
+
+                case 5:
+                    this.paper_size_name = "A5";
+                    this.paper_width = 210;
+                    this.paper_height = 148;
+                    break;
+
+                default:
+                    this.paper_size_name = "A3";
+                    this.paper_width = 420;
+                    this.paper_height = 297;
+                    break;
+
+            }
+            UpdateLocalVariables();
+        }
+
+        public void SetPaperSize(double width, double height)
+        {
+            this.paper_width = width;
+            this.paper_height = height;
+            this.paper_size_name = string.Format("Page with width {0} mm, height {1} mm", this.paper_width, this.paper_height);
+            UpdateLocalVariables();
+        }
+
+        public void SetPaperOrientation(bool is_landscape)
+        {
+            UpdatePageOrientation();
+            if (this.is_landscape != is_landscape)
+            {
+                double temp_w = this.paper_width;
+                this.paper_height = this.paper_width;
+                this.paper_width = temp_w;
+                UpdateLocalVariables();
+            } else
+            {
+                UpdateLocalVariables();
+            }
+            return;
+        }
+
+        public void SetScale(double scale)
+        {
+            this.scale = scale;
+            UpdateLocalVariables();
+        }
+
+        public void SetDrawingElementsScaling(bool scaling)
+        {
+            this.drawing_elements_scaling = scaling;
+            UpdateLocalVariables();
+        }
+
+        public void SetLayoutId(int id)
+        {
+            this.layout_id = id;
+            UpdateLocalVariables();
+        }
+
+        public void SetLayoutName(string name)
+        {
+            this.layout_name = name;
+            UpdateLocalVariables();
+        }
+
+        public void SetLayoutOrigin(Point3d origin)
+        {
+            this.layout_origin = origin;
+            UpdateLocalVariables();
+        }
+
+        public void SetLayoutPlane(Point3d origin)
+        {
+            this.layout_origin = origin;
+            UpdateLocalVariables();
+        }
+
+        public void SetLayoutPlane(Point3d origin, Vector3d x_axis)
+        {
+            this.layout_origin = origin;
+            this.layout_x = x_axis;
+            UpdateLocalVariables();
+        }
+
+        public void SetLayoutPlane(Vector3d x_axis)
+        {
+            this.layout_x = x_axis;
+            UpdateLocalVariables();
+        }
+
+        public void SetLayoutBoundingBox(Rectangle3d rectangle)
+        {
+            this.layout_boundingbox = rectangle;
+            this.model_width = Math.Abs(rectangle.X.T1 - rectangle.X.T0);
+            this.model_height = Math.Abs(rectangle.Y.T1 - rectangle.Y.T0);
+            this.paper_width = this.model_width / this.scale * 1000;
+            this.paper_height = this.model_height / this.scale * 1000;
+            this.layout_origin = rectangle.PointAt(0);
+            this.layout_x = new Vector3d(rectangle.PointAt(1) - rectangle.PointAt(0));
+            this.SetLayoutPlane(this.layout_origin, this.layout_x);
+            UpdateLocalVariables();
+        }
+
+        public void SetLayoutBoundingBox(double width, double height)
+        {
+            this.model_width = width;
+            this.model_height = height;
+            this.paper_width = this.model_width / this.scale * 1000;
+            this.paper_height = this.model_height / this.scale * 1000;
+            UpdateLocalVariables();
+        }
+
+        public void SetDrawingName(string name)
+        {
+            this.drawing_name = name;
+            UpdateLocalVariables();
+        }
+
+        public void SetDrawingAltName(string name)
+        {
+            this.drawing_alt_name = name;
+        }
+
+        public void SetPrintingEdge(double edge)
+        {
+            this.printing_edge = edge;
+            UpdateLocalVariables();
+        }
+
+        public void SetDrawingEdge(double edge)
+        {
+            this.drawing_edge = edge;
+            UpdateLocalVariables();
+        }
+
+        private void UpdateLocalVariables()
+        {
+            /// use private methods to update all relevant local variables IN ORDER -> UPDATE EVERYTHING!
+
+            // a list of methods to implement
+
+            UpdatePageOrientation();
+            UpdateLayoutPlane();
+            UpdateModelDimensions();
+            UpdateLayoutBoundingBox();
+            UpdateUserDictionary();
+
+            return;
+        }
+
+        private void UpdatePageOrientation() 
+        {
+            /// private method called on every change made to change the page size
+            if (this.paper_width >= this.paper_height)
+            {
+                this.is_landscape = true;
+                return;
+            } else
+            {
+                this.is_landscape = false;
+                return;
+            }
+        }
+
+        private void UpdateLayoutPlane()
+        {
+            this.layout_plane = new Plane(this.layout_origin, this.layout_x);
+        }
+
+        private void UpdateModelDimensions()
+        {
+            this.model_width = this.paper_width * this.scale / 1000;
+            this.model_height = this.paper_height * this.scale / 1000;
+        }
+
+        private void UpdateLayoutBoundingBox()
+        {
+            this.layout_boundingbox = new Rectangle3d(this.layout_plane, this.model_width, this.model_height);   
+        }
+
+        private void UpdateUserDictionary()
+        {
+            user_dictionary.SetLayoutSetting(this);
+            
+        }
+
+
+        public void DrawLayoutBoundingBox(RhinoDoc doc)
+        {
+            doc.Objects.AddRectangle(this.layout_boundingbox);
+        }
+
+    }
+
+    public class ExtendedArchivableDictionary : ArchivableDictionary
+    {
+        /// <summary>
+        /// Extended ArchivableDictionary class with new methods to set and get RPHLayoutSettings layout_settings
+        /// </summary>
+        private RPHLayoutSettings layout_settings;
+
+        public void SetLayoutSetting(RPHLayoutSettings layout_settings)
+        {          
+            this.layout_settings = layout_settings;
         }
         
-        public string GetId()
+        public RPHLayoutSettings GetLayoutSetting()
         {
-            return this.txt;
+            return this.layout_settings;
         }
     }
 }
+
+
 /*
     double startX = 0.0;
     ArchivableDictionary layout_info = new ArchivableDictionary();

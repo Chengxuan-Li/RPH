@@ -62,7 +62,7 @@ namespace RPH
                 //printing
 
                 double original_linetypescale = doc.Linetypes.LinetypeScale;
-                String file_name = String.Concat(path, @"\20220113K.pdf");
+                String file_name = String.Concat(path, @"\20220118TESTPRINTDOC.pdf");
                 //String file_name = @"C:\Users\liche\Dropbox\PC\Desktop\EX12\Brief 04\Detail\Original\33.pdf";
 
                 Rhino.Display.RhinoPageView[] pages = doc.Views.GetPageViews();
