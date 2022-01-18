@@ -45,6 +45,15 @@ public enum layout_options_edge
     printing_edge_mm
 }
 
+public enum justification
+{
+    bottom_left,
+    bottom_right,
+    top_left,
+    top_right,
+    center
+}
+
 
 namespace RPH
 {
@@ -96,6 +105,48 @@ namespace RPH
                     case 1:
                         List<string> layout_options_position = new List<string> { "From_Point", "From_Rectangle" };
                         LayoutOptionDialog layout_options_dialog_position = new LayoutOptionDialog("Specify Layout Position:", layout_options_position);
+                        int choice_jndex = layout_options_dialog_position.GetChoiceIndex();
+                        switch(choice_jndex)
+                        {
+                            case 1:
+                                GetPoint get_point = new GetPoint();
+                                get_point.SetCommandPrompt("Specify a Point");s
+                                get_point.AddOptionEnumList("Justification", justification.bottom_right);
+                                int i = -999;
+                                while (true)
+                                {
+                                    get_point.Get();
+                                    
+                                    //fixthis
+                                    if (i) )
+                                    {
+                                        Point3d pt = get_point.Point();
+                                        settings.SetLayoutOrigin(pt);
+                                        
+                                        break;
+                                        
+                                    }
+                                    
+
+                                }
+                                break;
+
+                            case 2:
+                                GetObject get_object = new GetObject();
+                                get_object.SetCommandPrompt("Specify a Rectangle");
+                                get_object.GeometryFilter = Rhino.DocObjects.ObjectType.Curve;
+                                
+                                get_object.Get();
+                                   
+                                break;
+
+                            default:
+                                break;
+
+                        }
+
+
+
 
                         break;
 
@@ -189,7 +240,7 @@ namespace RPH
         public double drawing_edge;
 
         // attribute settings
-        public ExtendedArchivableDictionary user_dictionary;
+        public ExtendedArchivableDictionary user_dictionary = new ExtendedArchivableDictionary();
 
         // private variables
         // private Vector3d unit_x = new Vector3d(1, 0, 0);
@@ -374,6 +425,7 @@ namespace RPH
         public void SetDrawingAltName(string name)
         {
             this.drawing_alt_name = name;
+            UpdateLocalVariables();
         }
 
         public void SetPrintingEdge(double edge)
