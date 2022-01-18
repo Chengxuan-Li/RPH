@@ -112,7 +112,7 @@ namespace RPH
                                 GetPoint get_point = new GetPoint();
                                 get_point.SetCommandPrompt("Specify a Point");
                                 get_point.AddOptionEnumList("Justification", justification.bottom_right);
-                                int i = -999;
+                                int option_index = 1;
                                 while (true)
                                 {
                                     get_point.Get();
@@ -128,7 +128,7 @@ namespace RPH
                                     }
                                     if (get_point.Result() == GetResult.Option)
                                     {
-                                        
+                                        option_index = get_point.Option().Index;
                                     }
 
                                 }
@@ -523,7 +523,6 @@ namespace RPH
     public class LayoutOptionDialog
     {
         private GetOption option = new Rhino.Input.Custom.GetOption();
-
         private List<string> option_names;
         private List<string> option_defaults;
         private List<int> option_indices = new List<int>();
