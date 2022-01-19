@@ -8,18 +8,6 @@ using System.IO;
 using Rhino.Collections;
 using System.Collections.Generic;
 
-
-
-public enum layout_options_general
-{
-    position,
-    paper,
-    scale,
-    name,
-    edge,
-    custom_ttributes
-}
-
 public enum layout_options_position
 {
     from_point,
@@ -45,14 +33,6 @@ public enum layout_options_edge
     printing_edge_mm
 }
 
-public enum justification
-{
-    bottom_left,
-    bottom_right,
-    top_left,
-    top_right,
-    center
-}
 
 
 namespace RPH
@@ -92,55 +72,120 @@ namespace RPH
 
                 List<string> layout_options_general = new List<string> { "Position", "Paper", "Scale", "Name", "Edge", "User_Attributes" };
                 List<string> layout_options_general_defaults = new List<string> { "Origin", "A3", "1:100", "Default", "Default", "Default_User_Attributes" };
-
-                LayoutOptionDialog layout_options_dialog_general = new LayoutOptionDialog("Layout Settings:", layout_options_general, layout_options_general_defaults);
+                GetOption options_dialog_general = new GetOption();
+                LayoutOptionDialog layout_options_dialog_general = new LayoutOptionDialog(options_dialog_general, "Layout Settings:", layout_options_general, layout_options_general_defaults);
+                int general_choice_index = layout_options_dialog_general.DialogResult().Getint("choice_index", -1);
                 
-                
-                
-                int choice_index = layout_options_dialog_general.GetChoiceIndex();
-                
-
-                switch(choice_index)
+                switch(general_choice_index)
                 {
                     case 1:
-                        List<string> layout_options_position = new List<string> { "From_Point", "From_Rectangle" };
-                        LayoutOptionDialog layout_options_dialog_position = new LayoutOptionDialog("Specify Layout Position:", layout_options_position);
-                        int choice_jndex = layout_options_dialog_position.GetChoiceIndex();
-                        switch(choice_jndex)
+                        List<string> layout_options_position = new List<string> { "From_Point", "From_Content_Objects" };
+                        GetOption options_dialog_position = new GetOption();
+                        LayoutOptionDialog layout_options_dialog_position = new LayoutOptionDialog(options_dialog_position, "Specify Layout Position:", layout_options_position);
+                        int position_choice_index = layout_options_dialog_position.DialogResult().Getint("choice_index", -1);
+
+                        switch(position_choice_index)
                         {
                             case 1:
-                                GetPoint get_point = new GetPoint();
-                                get_point.SetCommandPrompt("Specify a Point");
-                                get_point.AddOptionEnumList("Justification", justification.bottom_right);
-                                int i = -999;
-                                while (true)
+                                bool choosing_point = true;
+                                int justification_choice_index = 1;
+                                Point3d point = new Point3d(0, 0, 0);
+                                List<string> justification = new List<string> { "Bottom_Left", "Bottom_Right", "Top_Left", "Top_Right", "Center" };
+                                while (choosing_point)
                                 {
-                                    get_point.Get();
+                                    GetPoint options_dialog_point = new GetPoint();
+                                    //options_dialog_point.AddOptionEnumList("Justification", justification.bottom_right);
+                                    LayoutOptionDialog layout_options_dialog_point = new LayoutOptionDialog(options_dialog_point, "Specify a Point", new List<string> { "Justification" }, new List<string> {justification[justification_choice_index - 1]});
+                                    int point_choice_index = layout_options_dialog_position.DialogResult().Getint("choice_index", -1);
                                     
-                                    //fixthis
-                                    if (get_point.Result() == GetResult.Point)
+
+                                    if (layout_options_dialog_point.DialogResult().Getint("choice_index", -1) == 0)
                                     {
-                                        Point3d pt = get_point.Point();
-                                        settings.SetLayoutOrigin(pt);
+                                        GetOption option_dialog_justification = new GetOption();
                                         
-                                        break;
-                                        
-                                    }
-                                    if (get_point.Result() == GetResult.Option)
-                                    {
-                                        
+                                        LayoutOptionDialog layout_options_dialog_justification = new LayoutOptionDialog(option_dialog_justification, "Specify Justification Method", justification);
+                                        justification_choice_index = layout_options_dialog_justification.DialogResult().Getint("choice_index", 1);
                                     }
 
+                                    if (layout_options_dialog_point.DialogResult().Getint("choice_index", -1) == 1)
+                                    {
+                                        point = layout_options_dialog_point.DialogResult().GetPoint3d("result", new Point3d(0, 0, 0));
+                                        break;
+                                    }
+
+                                    if (layout_options_dialog_point.DialogResult().Getint("choice_index", -1) == -1)
+                                    {
+                                        break;
+                                    }
                                 }
+                                Rectangle3d layout_rectangle;
+                                switch (justification_choice_index)
+                                {
+                                    case 1:
+                                        layout_rectangle = settings.layout_boundingbox;
+                                        layout_rectangle.Transform(Transform.Translation(point - layout_rectangle.PointAt(4)));
+                                        settings.SetLayoutScaleOrigin(point);
+                                        settings.SetLayoutBoundingBox(layout_rectangle);
+                                        settings.SetLayoutScaleOrigin(point);
+                                        break;
+                                    case 2:
+                                        layout_rectangle = settings.layout_boundingbox;
+                                        layout_rectangle.Transform(Transform.Translation(point - layout_rectangle.PointAt(1)));
+                                        settings.SetLayoutScaleOrigin(point);
+                                        settings.SetLayoutBoundingBox(layout_rectangle);
+                                        settings.SetLayoutScaleOrigin(point);
+                                        break;
+                                    case 3:
+                                        layout_rectangle = settings.layout_boundingbox;
+                                        layout_rectangle.Transform(Transform.Translation(point - layout_rectangle.PointAt(3)));
+                                        settings.SetLayoutScaleOrigin(point);
+                                        settings.SetLayoutBoundingBox(layout_rectangle);
+                                        settings.SetLayoutScaleOrigin(point);
+                                        break;
+                                    case 4:
+                                        layout_rectangle = settings.layout_boundingbox;
+                                        layout_rectangle.Transform(Transform.Translation(point - layout_rectangle.PointAt(2)));
+                                        settings.SetLayoutScaleOrigin(point);
+                                        settings.SetLayoutBoundingBox(layout_rectangle);
+                                        settings.SetLayoutScaleOrigin(point);
+                                        break;
+                                    case 5:
+                                        layout_rectangle = settings.layout_boundingbox;
+                                        layout_rectangle.Transform(Transform.Translation(point - layout_rectangle.Center));
+                                        settings.SetLayoutScaleOrigin(point);
+                                        settings.SetLayoutBoundingBox(layout_rectangle);
+                                        settings.SetLayoutScaleOrigin(point);
+                                        break;
+                                    default:
+                                        settings.SetLayoutOrigin(point);
+                                        settings.SetLayoutScaleOrigin(point);
+                                        break;
+                                }
+
+                                settings.DrawLayoutBoundingBox(doc);
+                                
                                 break;
 
                             case 2:
-                                GetObject get_object = new GetObject();
-                                get_object.SetCommandPrompt("Specify a Rectangle");
-                                get_object.GeometryFilter = Rhino.DocObjects.ObjectType.Curve;
-                                
-                                get_object.Get();
-                                   
+                                GetObject options_dialog_objects = new GetObject();
+                                options_dialog_objects.GeometryFilter = Rhino.DocObjects.ObjectType.Point | Rhino.DocObjects.ObjectType.Curve | Rhino.DocObjects.ObjectType.PointSet;
+                                options_dialog_objects.AcceptPoint(true);
+                                LayoutOptionDialog layout_options_dialog_objects = new LayoutOptionDialog(options_dialog_objects, "Pick Content Objects");
+                                int bounding_box_mode_index = layout_options_dialog_objects.DialogResult().Getint("choice_index", 2);
+                                bool accurate = false;
+                                ObjectListBoundingBox Box = new ObjectListBoundingBox(options_dialog_objects.Objects(), accurate);
+                                BoundingBox box = Box.Box();
+                                Rectangle3d rectangle = new Rectangle3d(Plane.WorldXY, box.Min, box.Max);
+                                settings.SetLayoutBoundingBox(rectangle);
+                                settings.SetLayoutScaleOrigin(rectangle.Center);
+
+
+
+
+
+
+
+
                                 break;
 
                             default:
@@ -224,14 +269,16 @@ namespace RPH
         public bool is_landscape;
 
         // plotting settings
-        public double scale;
+        public double scale = 100;
         public bool drawing_elements_scaling;
 
         // layout settings
         public int layout_id;
         public string layout_name;
         public Point3d layout_origin;
+        public Point3d layout_scale_origin;
         public Plane layout_plane;
+        public Plane layout_scale_plane;
         public double model_width;
         public double model_height;
         public Rectangle3d layout_boundingbox;
@@ -247,7 +294,7 @@ namespace RPH
 
         // private variables
         // private Vector3d unit_x = new Vector3d(1, 0, 0);
-        private Vector3d layout_x = new Vector3d(1, 0, 0);
+        private Vector3d layout_x = new Vector3d(0, 0, 1);
 
         public RPHLayoutSettings()
         {
@@ -264,7 +311,9 @@ namespace RPH
             this.layout_id = 0;
             this.layout_name = "Default Layout";
             this.layout_origin = new Point3d(0, 0, 0);
+            this.layout_scale_origin = new Point3d(0, 0, 0);
             UpdateLayoutPlane();
+            this.layout_boundingbox = new Rectangle3d(this.layout_plane, this.model_width, this.model_height);
             UpdateLayoutBoundingBox();
 
             this.drawing_name = "Default Drawing";
@@ -374,7 +423,25 @@ namespace RPH
 
         public void SetLayoutOrigin(Point3d origin)
         {
+            this.layout_scale_origin = (Point3d)(this.layout_scale_origin + origin - this.layout_origin);
             this.layout_origin = origin;
+            UpdateLocalVariables();
+        }
+
+        public void SetLayoutOrigin(double x, double y)
+        {
+            SetLayoutOrigin(new Point3d(x, y, 0));
+        }
+
+        public void SetLayoutScaleOrigin(Point3d origin)
+        {
+            this.layout_scale_origin = origin;
+            UpdateLocalVariables();
+        }
+
+        public void SetLayoutScaleOrigin(double x, double y)
+        {
+            SetLayoutScaleOrigin(new Point3d(x, y, 0));
             UpdateLocalVariables();
         }
 
@@ -397,6 +464,18 @@ namespace RPH
             UpdateLocalVariables();
         }
 
+        public void SetLayoutScalePlane(Point3d origin)
+        {
+            this.layout_scale_plane = new Plane(origin, this.layout_x);
+        }
+
+        public void SetLayoutScalePlane(Point3d origin, Vector3d x_axis)
+        {
+            this.layout_x = x_axis;
+            this.layout_scale_plane = new Plane(origin, x_axis);
+            UpdateLocalVariables();
+        }
+
         public void SetLayoutBoundingBox(Rectangle3d rectangle)
         {
             this.layout_boundingbox = rectangle;
@@ -406,6 +485,7 @@ namespace RPH
             this.paper_height = this.model_height / this.scale * 1000;
             this.layout_origin = rectangle.PointAt(0);
             this.layout_x = new Vector3d(rectangle.PointAt(1) - rectangle.PointAt(0));
+            //this.SetLayoutScaleOrigin(rectangle.Center);
             this.SetLayoutPlane(this.layout_origin, this.layout_x);
             UpdateLocalVariables();
         }
@@ -416,6 +496,10 @@ namespace RPH
             this.model_height = height;
             this.paper_width = this.model_width / this.scale * 1000;
             this.paper_height = this.model_height / this.scale * 1000;
+            this.layout_boundingbox = new Rectangle3d(Plane.WorldXY, this.model_width, this.model_height);
+            Point3d center = new Point3d(width / 2, height / 2, 0);
+            this.layout_origin = new Point3d(0, 0, 0);
+            //SetLayoutScaleOrigin(center);
             UpdateLocalVariables();
         }
 
@@ -475,6 +559,7 @@ namespace RPH
         private void UpdateLayoutPlane()
         {
             this.layout_plane = new Plane(this.layout_origin, this.layout_x);
+            this.layout_scale_plane = new Plane(this.layout_scale_origin, this.layout_x);
         }
 
         private void UpdateModelDimensions()
@@ -485,13 +570,13 @@ namespace RPH
 
         private void UpdateLayoutBoundingBox()
         {
-            this.layout_boundingbox = new Rectangle3d(this.layout_plane, this.model_width, this.model_height);   
+            Transform scale = Transform.Scale(this.layout_scale_plane, model_width / Math.Abs(this.layout_boundingbox.X.Length), model_height / Math.Abs(this.layout_boundingbox.Y.Length) , 1);
+            this.layout_boundingbox.Transform(scale);
         }
 
         private void UpdateUserDictionary()
         {
             user_dictionary.SetLayoutSetting(this);
-            
         }
 
 
@@ -518,55 +603,194 @@ namespace RPH
         {
             return this.layout_settings;
         }
+
     }
+
+    /*
+    public class GenericArchivableDictionary<T> : ArchivableDictionary where T: Getba
+    {
+        private T t;
+
+        public void SetDialogOption(T dialog_option)
+        {
+            this.t = dialog_option;
+        }
+
+        public T GetDialogOption()
+        {
+            return this.t;
+        }
+    }
+    */
 
     public class LayoutOptionDialog
     {
-        private GetOption option = new Rhino.Input.Custom.GetOption();
+        //private GetOption option = new Rhino.Input.Custom.GetOption();
+        
+        //private List<string> option_names;
+        //private List<string> option_defaults;
+        //private List<int> option_indices = new List<int>();
 
-        private List<string> option_names;
-        private List<string> option_defaults;
-        private List<int> option_indices = new List<int>();
-        private string msg;
+        private ArchivableDictionary result = new ArchivableDictionary();
 
-        private int choice_index;
-
-        public LayoutOptionDialog(string msg, List<string> option_names, List<string> option_defaults)
+        public LayoutOptionDialog(GetOption option, string msg, List<string> option_names, List<string> option_defaults)
         {
-            this.msg = msg;
-            this.option_names = option_names;
-            this.option_defaults = option_defaults;
-
-            this.option.SetCommandPrompt(msg);
-            for (int i = 0; i < this.option_names.Count; i++)
-            {
-                this.option.AddOption(this.option_names[i], this.option_defaults[i]);
-                this.option_indices.Add(i);
-            }
-            this.option.Get();
-            this.choice_index = this.option.Option().Index;
+            AddOptions(option, msg, option_names, option_defaults);
+            Get(option);
         }
 
-        public LayoutOptionDialog(string msg, List<string> option_names)
+        public LayoutOptionDialog(GetObject option, string msg, List<string> option_names, List<string> option_defaults)
         {
-            this.msg = msg;
-            this.option_names = option_names;
-
-            this.option.SetCommandPrompt(msg);
-            for (int i = 0; i < this.option_names.Count; i++)
-            {
-                this.option.AddOption(this.option_names[i]);
-                this.option_indices.Add(i);
-            }
-            this.option.Get();
-            this.choice_index = this.option.Option().Index;
+            AddOptions(option, msg, option_names, option_defaults);
+            Get(option);
         }
 
-        public int GetChoiceIndex()
+        public LayoutOptionDialog(GetPoint option, string msg, List<string> option_names, List<string> option_defaults)
         {
-            return this.choice_index;
+            AddOptions(option, msg, option_names, option_defaults);
+            Get(option);
+        }
+
+        public LayoutOptionDialog(GetOption option, string msg, List<string> option_names)
+        {
+            AddOptions(option, msg, option_names);
+            Get(option);
+        }
+
+        public LayoutOptionDialog(GetObject option, string msg, List<string> option_names)
+        {
+            AddOptions(option, msg, option_names);
+            Get(option);
+        }
+
+        public LayoutOptionDialog(GetPoint option, string msg, List<string> option_names)
+        {
+            AddOptions(option, msg, option_names);
+            Get(option);
+        }
+
+        public LayoutOptionDialog(GetPoint option, string msg)
+        {
+            option.SetCommandPrompt(msg);
+            Get(option);
+        }
+
+        public LayoutOptionDialog(GetObject option, string msg)
+        {
+            option.SetCommandPrompt(msg);
+            Get(option);
+        }
+
+        private void AddOptions(GetBaseClass option, string msg, List<string> option_names, List<string> option_defaults)
+        {
+            option.SetCommandPrompt(msg);
+            for (int i = 0; i < option_names.Count; i++)
+            {
+                option.AddOption(option_names[i], option_defaults[i]);
+            }
+        }
+
+        private void AddOptions(GetBaseClass option, string msg, List<string> option_names)
+        {
+            option.SetCommandPrompt(msg);
+            for (int i = 0; i < option_names.Count; i++)
+            {
+                option.AddOption(option_names[i]);
+            }
+        }
+
+        private void Get(GetOption option)
+        {
+            while (true)
+            {
+                option.Get();
+                if (option.Result() == GetResult.Option)
+                {
+                    this.result.Set("choice_index" , option.Option().Index);
+                    break;
+                }
+                if (option.Result() == GetResult.Cancel)
+                {
+                    this.result.Set("choice_index", -1);
+                    break;
+                }
+            }
+        }
+
+        private void Get(GetPoint option)
+        {
+            while (true)
+            {
+                option.Get();
+                if (option.Result() == GetResult.Option)
+                {
+                    this.result.Set("choice_index", 0);
+                    break;
+                }
+                if (option.Result() == GetResult.Cancel)
+                {
+                    this.result.Set("choice_index", -1);
+                    break;
+                }
+                if (option.Result() == GetResult.Point)
+                {
+                    this.result.Set("choice_index", 1);
+                    this.result.Set("result", option.Point());
+                    break;
+                }
+            }
+        }
+
+        private void Get(GetObject option)
+        {
+            while (true)
+            {
+                option.Get();
+                if (option.Result() == GetResult.Option)
+                {
+                    this.result.Set("choice_index", 0);
+                }
+                if (option.Result() == GetResult.Cancel)
+                {
+                    this.result.Set("choice_index", -1);
+                    break;
+                }
+                if (option.Result() == GetResult.Object)
+                {
+                    this.result.Set("choice_index", 1);
+                    this.result.Set("result", option.Objects());
+                    break;
+                }
+            }
+        }
+
+        public ArchivableDictionary DialogResult()
+        {
+            return this.result;
         }
     }
+
+    public class ObjectListBoundingBox
+    {
+        BoundingBox box;
+        public ObjectListBoundingBox(Rhino.DocObjects.ObjRef[] objrefs, bool accurate)
+        {
+            GeometryBase geometry_base = objrefs[0].Geometry();
+            box = geometry_base.GetBoundingBox(accurate);
+
+            for (int i = 1; i < objrefs.Length; i++)
+            {
+                geometry_base = objrefs[i].Geometry();
+                box.Union(geometry_base.GetBoundingBox(accurate));
+            }
+        }
+
+        public BoundingBox Box()
+        {
+            return box;
+        }
+    }
+
 }
 
 
