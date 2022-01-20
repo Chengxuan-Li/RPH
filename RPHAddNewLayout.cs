@@ -71,7 +71,26 @@ namespace RPH
             {
 
                 List<string> layout_options_general = new List<string> { "Position", "Paper", "Scale", "Name", "Edge", "User_Attributes" };
-                List<string> layout_options_general_defaults = new List<string> { "Origin", "A3", "1:100", "Default", "Default", "Default_User_Attributes" };
+                List<string> layout_options_general_defaults = new List<string> { "Origin", settings.paper_size_name, String.Format("1:{0}", settings.scale), "Default", "Default", " " };
+
+                List<string> layout_options_position = new List<string> { "From_Point", "From_Content_Objects" };
+                List<string> justification = new List<string> { "Bottom_Left", "Bottom_Right", "Top_Left", "Top_Right", "Center" };
+
+                List<string> layout_options_paper = new List<string> { "ISO_Paper_Code", "Orientation", "Use_Custom_Paper_Size" };
+                List<string> layout_options_paper_defaults = new List<string> { settings.paper_size_name, "Portrait", "No" };
+                if (settings.is_landscape)
+                {
+                    layout_options_paper_defaults = new List<string> { settings.paper_size_name, "Landscape", "No" };
+                }
+
+                List<string> layout_options_paper_codes = new List<string> { "A0", "A1", "A2", "A3", "A4", "A5" };
+
+                List<string> layout_options_name = new List<string> { "layout_name", "drawing_name", "drawing_alt_name" };
+                List<string> layout_options_name_defaults = new List<string> { settings.layout_name, settings.drawing_name, settings.drawing_alt_name };
+
+                Point3d point = new Point3d(0, 0, 0);
+
+
                 GetOption options_dialog_general = new GetOption();
                 LayoutOptionDialog layout_options_dialog_general = new LayoutOptionDialog(options_dialog_general, "Layout Settings:", layout_options_general, layout_options_general_defaults);
                 int general_choice_index = layout_options_dialog_general.DialogResult().Getint("choice_index", -1);
@@ -79,7 +98,7 @@ namespace RPH
                 switch(general_choice_index)
                 {
                     case 1:
-                        List<string> layout_options_position = new List<string> { "From_Point", "From_Content_Objects" };
+                        /// position options
                         GetOption options_dialog_position = new GetOption();
                         LayoutOptionDialog layout_options_dialog_position = new LayoutOptionDialog(options_dialog_position, "Specify Layout Position:", layout_options_position);
                         int position_choice_index = layout_options_dialog_position.DialogResult().Getint("choice_index", -1);
@@ -89,8 +108,7 @@ namespace RPH
                             case 1:
                                 bool choosing_point = true;
                                 int justification_choice_index = 1;
-                                Point3d point = new Point3d(0, 0, 0);
-                                List<string> justification = new List<string> { "Bottom_Left", "Bottom_Right", "Top_Left", "Top_Right", "Center" };
+                                
                                 while (choosing_point)
                                 {
                                     GetPoint options_dialog_point = new GetPoint();
@@ -162,11 +180,12 @@ namespace RPH
                                         break;
                                 }
 
-                                settings.DrawLayoutBoundingBox(doc);
-                                
+                                settings.DrawLayoutBoundingBox(doc);//TODO - DEBUG PREVIEWS ONLY
+                                layout_options_general_defaults[0] = "User_Specified_Point";
                                 break;
 
                             case 2:
+                                //TODO - HIDE THIS OPTION
                                 GetObject options_dialog_objects = new GetObject();
                                 options_dialog_objects.GeometryFilter = Rhino.DocObjects.ObjectType.Point | Rhino.DocObjects.ObjectType.Curve | Rhino.DocObjects.ObjectType.PointSet;
                                 options_dialog_objects.AcceptPoint(true);
@@ -178,30 +197,122 @@ namespace RPH
                                 Rectangle3d rectangle = new Rectangle3d(Plane.WorldXY, box.Min, box.Max);
                                 settings.SetLayoutBoundingBox(rectangle);
                                 settings.SetLayoutScaleOrigin(rectangle.Center);
-
-
-
-
-
-
-
-
                                 break;
 
                             default:
                                 break;
 
                         }
-
-
-
-
                         break;
 
                     case 2:
+                        /// paper options
+                        bool choosing_paper = true;
+                        while (choosing_paper)
+                        {
+                            layout_options_paper_defaults[0] = settings.paper_size_name;
+                            if (settings.is_landscape)
+                            {
+                                layout_options_paper_defaults[1] = "Landscape";
+                            } else
+                            {
+                                layout_options_paper_defaults[1] = "Portrait";
+                            }
+
+                            GetOption options_dialog_paper = new GetOption();
+                            LayoutOptionDialog layout_options_dialog_paper = new LayoutOptionDialog(options_dialog_paper, "Paper Settings:", layout_options_paper, layout_options_paper_defaults);
+                            int paper_choice_index = layout_options_dialog_paper.DialogResult().Getint("choice_index", -1);
+
+                            if (paper_choice_index == -1)
+                            {
+                                choosing_paper = false;
+                            }
+                            switch (paper_choice_index)
+                            {
+                                case 1:
+                                    GetOption options_dialog_paper_codes = new GetOption();
+                                    LayoutOptionDialog layout_options_dialog_paper_codes = new LayoutOptionDialog(options_dialog_paper_codes, "ISO Paper Size:", layout_options_paper_codes);
+                                    int paper_code_choice_index = layout_options_dialog_paper_codes.DialogResult().Getint("choice_index", -1);
+                                    if (paper_code_choice_index != -1)
+                                    {
+                                        settings.SetPaperSize(paper_code_choice_index - 1);
+                                    }
+                                    break;
+                                case 2:
+                                    GetOption options_dialog_paper_orientation = new GetOption();
+                                    LayoutOptionDialog layout_options_dialog_paper_orientation = new LayoutOptionDialog(options_dialog_paper_orientation, "Orientation:", new List<string> { "Landscape", "Portrait" });
+                                    int paper_orientation_choice_index = layout_options_dialog_paper_orientation.DialogResult().Getint("choice_index", -1);
+                                    if (paper_orientation_choice_index == 1)
+                                    {
+                                        settings.SetPaperOrientation(true);
+                                    }
+                                    if (paper_orientation_choice_index == 2)
+                                    {
+                                        settings.SetPaperOrientation(false);
+                                    }
+                                    break;
+                                case 3:
+                                    double paper_width = settings.paper_width;
+                                    double paper_height = settings.paper_height;
+
+                                    GetNumber options_dialog_paper_width = new GetNumber();
+                                    LayoutOptionDialog layout_options_dialog_paper_width = new LayoutOptionDialog(options_dialog_paper_width, "Width (mm)");
+
+                                    int paper_width_choice_index = layout_options_dialog_paper_width.DialogResult().Getint("choice_index", -1);
+                                    if (paper_width_choice_index == 1)
+                                    {
+                                        paper_width = layout_options_dialog_paper_width.DialogResult().GetDouble("result");
+                                    }
+
+                                    GetNumber options_dialog_paper_height = new GetNumber();
+                                    LayoutOptionDialog layout_options_dialog_paper_height = new LayoutOptionDialog(options_dialog_paper_height, "Height (mm)");
+
+                                    int paper_height_choice_index = layout_options_dialog_paper_height.DialogResult().Getint("choice_index", -1);
+                                    if (paper_height_choice_index == 1)
+                                    {
+                                        paper_height = layout_options_dialog_paper_height.DialogResult().GetDouble("result");
+                                    }
+                                    settings.SetPaperSize(paper_width, paper_height);
+                                    layout_options_paper_defaults[2] = "Yes";
+                                    break;
+                                default:
+
+                                    break;
+                            }
+
+                        }
+
                         break;
-                        
-      
+
+                    case 3:
+                        /// scale options
+                        double scale = settings.scale;
+                        GetNumber options_dialog_scale = new GetNumber();
+                        LayoutOptionDialog layout_options_dialog_scale = new LayoutOptionDialog(options_dialog_scale, "Specify Drawing Scale (e.g. 100 means 1:100)");
+                        int paper_scale_choice_index = layout_options_dialog_scale.DialogResult().Getint("choice_index", -1);
+                        if (paper_scale_choice_index == 1)
+                        {
+                            scale = layout_options_dialog_scale.DialogResult().GetDouble("result", 100);
+                        }
+                        settings.SetScale(scale);
+                        break;
+
+                    case 4:
+                        /// name options
+
+                        break;
+
+                    case 5:
+                        /// edge options
+
+                        break;
+
+
+                    case -1:
+                        choosing_layout_options = false;
+                        break;
+
+
 
                 }
 
@@ -213,10 +324,6 @@ namespace RPH
                 //GetResult result = layout_options.Get();
                 //string msg = layout_options.OptionIndex().ToString();
 
-                Rhino.UI.SaveFileDialog save = new Rhino.UI.SaveFileDialog();
-                //save.Title = choice_index.ToString();
-                save.Filter = ".pdf";
-                save.ShowSaveDialog();
 
                 
                 // ask for page size
@@ -229,7 +336,7 @@ namespace RPH
 
 
                 // ask for justification
-                choosing_layout_options = false;
+                
             }
 
 
@@ -377,7 +484,7 @@ namespace RPH
         {
             this.paper_width = width;
             this.paper_height = height;
-            this.paper_size_name = string.Format("Page with width {0} mm, height {1} mm", this.paper_width, this.paper_height);
+            this.paper_size_name = string.Format("{0}mm_x_{1}mm_User_Defined_Paper", this.paper_width, this.paper_height);
             UpdateLocalVariables();
         }
 
@@ -386,7 +493,7 @@ namespace RPH
             UpdatePageOrientation();
             if (this.is_landscape != is_landscape)
             {
-                double temp_w = this.paper_width;
+                double temp_w = this.paper_height;
                 this.paper_height = this.paper_width;
                 this.paper_width = temp_w;
                 UpdateLocalVariables();
@@ -681,6 +788,12 @@ namespace RPH
             Get(option);
         }
 
+        public LayoutOptionDialog(GetNumber option, string msg)
+        {
+            option.SetCommandPrompt(msg);
+            Get(option);
+        }
+
         private void AddOptions(GetBaseClass option, string msg, List<string> option_names, List<string> option_defaults)
         {
             option.SetCommandPrompt(msg);
@@ -736,6 +849,30 @@ namespace RPH
                 {
                     this.result.Set("choice_index", 1);
                     this.result.Set("result", option.Point());
+                    break;
+                }
+            }
+        }
+
+        private void Get(GetNumber option)
+        {
+            while (true)
+            {
+                option.Get();
+                if (option.Result() == GetResult.Option)
+                {
+                    this.result.Set("choice_index", 0);
+                    break;
+                }
+                if (option.Result() == GetResult.Cancel)
+                {
+                    this.result.Set("choice_index", -1);
+                    break;
+                }
+                if (option.Result() == GetResult.Number)
+                {
+                    this.result.Set("choice_index", 1);
+                    this.result.Set("result", option.Number());
                     break;
                 }
             }
