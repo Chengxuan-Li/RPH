@@ -3,10 +3,13 @@ using Rhino.Commands;
 using Rhino.Geometry;
 using Rhino.Input;
 using Rhino.Input.Custom;
+using Rhino.Display;
+using Rhino.DocObjects.Tables;
 using System;
 using System.IO;
 using Rhino.Collections;
 using System.Collections.Generic;
+using System.Drawing;
 
 public enum layout_options_position
 {
@@ -67,11 +70,13 @@ namespace RPH
 
             RPHLayoutSettings settings = new RPHLayoutSettings();
 
+
             while (choosing_layout_options)
             {
+                settings.LayoutCreationPreview(true);
 
                 List<string> layout_options_general = new List<string> { "Position", "Paper", "Scale", "Name", "Edge", "User_Attributes" };
-                List<string> layout_options_general_defaults = new List<string> { "Origin", settings.paper_size_name, String.Format("1:{0}", settings.scale), "Default", "Default", " " };
+                List<string> layout_options_general_defaults = new List<string> { "", settings.paper_size_name, String.Format("1:{0}", settings.scale), "", "", "" };
 
                 List<string> layout_options_position = new List<string> { "From_Point", "From_Content_Objects" };
                 List<string> justification = new List<string> { "Bottom_Left", "Bottom_Right", "Top_Left", "Top_Right", "Center" };
@@ -90,10 +95,14 @@ namespace RPH
 
                 Point3d point = new Point3d(0, 0, 0);
 
+                
+
+                        
 
                 GetOption options_dialog_general = new GetOption();
                 LayoutOptionDialog layout_options_dialog_general = new LayoutOptionDialog(options_dialog_general, "Layout Settings:", layout_options_general, layout_options_general_defaults);
                 int general_choice_index = layout_options_dialog_general.DialogResult().Getint("choice_index", -1);
+
                 
                 switch(general_choice_index)
                 {
@@ -112,7 +121,24 @@ namespace RPH
                                 while (choosing_point)
                                 {
                                     GetPoint options_dialog_point = new GetPoint();
-                                    //options_dialog_point.AddOptionEnumList("Justification", justification.bottom_right);
+                                    Vector3d[] bounding_box_relative_transform_vectors = settings.GetBoundingBoxRelativeRelativeTransformVectors(justification_choice_index);
+
+                                    options_dialog_point.DynamicDraw += (sender, e) => e.Display.DrawLine(
+                                        e.CurrentPoint + bounding_box_relative_transform_vectors[0], e.CurrentPoint + bounding_box_relative_transform_vectors[1],
+                                        Color.White, 2);
+
+                                    options_dialog_point.DynamicDraw += (sender, e) => e.Display.DrawLine(
+                                        e.CurrentPoint + bounding_box_relative_transform_vectors[1], e.CurrentPoint + bounding_box_relative_transform_vectors[2],
+                                        Color.White, 2);
+
+                                    options_dialog_point.DynamicDraw += (sender, e) => e.Display.DrawLine(
+                                        e.CurrentPoint + bounding_box_relative_transform_vectors[2], e.CurrentPoint + bounding_box_relative_transform_vectors[3],
+                                        Color.White, 2);
+
+                                    options_dialog_point.DynamicDraw += (sender, e) => e.Display.DrawLine(
+                                        e.CurrentPoint + bounding_box_relative_transform_vectors[3], e.CurrentPoint + bounding_box_relative_transform_vectors[0],
+                                        Color.White, 2);
+
                                     LayoutOptionDialog layout_options_dialog_point = new LayoutOptionDialog(options_dialog_point, "Specify a Point", new List<string> { "Justification" }, new List<string> {justification[justification_choice_index - 1]});
                                     int point_choice_index = layout_options_dialog_position.DialogResult().Getint("choice_index", -1);
                                     
@@ -175,28 +201,38 @@ namespace RPH
                                         settings.SetLayoutScaleOrigin(point);
                                         break;
                                     default:
-                                        settings.SetLayoutOrigin(point);
-                                        settings.SetLayoutScaleOrigin(point);
+
                                         break;
                                 }
 
-                                settings.DrawLayoutBoundingBox(doc);//TODO - DEBUG PREVIEWS ONLY
-                                layout_options_general_defaults[0] = "User_Specified_Point";
+                                settings.LayoutCreationPreview(true);
+                                doc.Views.Redraw();
                                 break;
 
+                               
+
                             case 2:
-                                //TODO - HIDE THIS OPTION
+                                settings.LayoutCreationPreview(false);
+
                                 GetObject options_dialog_objects = new GetObject();
                                 options_dialog_objects.GeometryFilter = Rhino.DocObjects.ObjectType.Point | Rhino.DocObjects.ObjectType.Curve | Rhino.DocObjects.ObjectType.PointSet;
-                                options_dialog_objects.AcceptPoint(true);
+                                
                                 LayoutOptionDialog layout_options_dialog_objects = new LayoutOptionDialog(options_dialog_objects, "Pick Content Objects");
                                 int bounding_box_mode_index = layout_options_dialog_objects.DialogResult().Getint("choice_index", 2);
                                 bool accurate = false;
+
+                                // TODO OPTIONS AND NULL HANDLING
+
                                 ObjectListBoundingBox Box = new ObjectListBoundingBox(options_dialog_objects.Objects(), accurate);
                                 BoundingBox box = Box.Box();
                                 Rectangle3d rectangle = new Rectangle3d(Plane.WorldXY, box.Min, box.Max);
+
                                 settings.SetLayoutBoundingBox(rectangle);
                                 settings.SetLayoutScaleOrigin(rectangle.Center);
+
+                                settings.LayoutCreationPreview(true);
+                                doc.Views.Redraw();
+
                                 break;
 
                             default:
@@ -206,6 +242,9 @@ namespace RPH
                         break;
 
                     case 2:
+                        settings.LayoutCreationPreview(true);
+                        doc.Views.Redraw();
+
                         /// paper options
                         bool choosing_paper = true;
                         while (choosing_paper)
@@ -227,16 +266,30 @@ namespace RPH
                             {
                                 choosing_paper = false;
                             }
+
                             switch (paper_choice_index)
                             {
                                 case 1:
+
                                     GetOption options_dialog_paper_codes = new GetOption();
                                     LayoutOptionDialog layout_options_dialog_paper_codes = new LayoutOptionDialog(options_dialog_paper_codes, "ISO Paper Size:", layout_options_paper_codes);
                                     int paper_code_choice_index = layout_options_dialog_paper_codes.DialogResult().Getint("choice_index", -1);
-                                    if (paper_code_choice_index != -1)
+                                    if (settings.is_landscape)
                                     {
-                                        settings.SetPaperSize(paper_code_choice_index - 1);
+                                        if (paper_code_choice_index != -1)
+                                        {
+                                            settings.SetPaperSize(paper_code_choice_index - 1);
+                                        }
+                                    } else
+                                    {
+                                        if (paper_code_choice_index != -1)
+                                        {
+                                            settings.SetPaperSize(paper_code_choice_index - 1);
+                                            settings.SetPaperSize(paper_code_choice_index - 1);
+                                        }
+                                        settings.SetPaperOrientation(false);//remain original orientation because SetPaperSize() always sets it into landscape XD NOOB ME
                                     }
+                                    doc.Views.Redraw();
                                     break;
                                 case 2:
                                     GetOption options_dialog_paper_orientation = new GetOption();
@@ -250,6 +303,7 @@ namespace RPH
                                     {
                                         settings.SetPaperOrientation(false);
                                     }
+                                    doc.Views.Redraw();
                                     break;
                                 case 3:
                                     double paper_width = settings.paper_width;
@@ -272,7 +326,9 @@ namespace RPH
                                     {
                                         paper_height = layout_options_dialog_paper_height.DialogResult().GetDouble("result");
                                     }
+
                                     settings.SetPaperSize(paper_width, paper_height);
+                                    doc.Views.Redraw();
                                     layout_options_paper_defaults[2] = "Yes";
                                     break;
                                 default:
@@ -285,6 +341,8 @@ namespace RPH
                         break;
 
                     case 3:
+                        settings.LayoutCreationPreview(true);
+                        doc.Views.Redraw();
                         /// scale options
                         double scale = settings.scale;
                         GetNumber options_dialog_scale = new GetNumber();
@@ -295,14 +353,17 @@ namespace RPH
                             scale = layout_options_dialog_scale.DialogResult().GetDouble("result", 100);
                         }
                         settings.SetScale(scale);
+                        doc.Views.Redraw();
                         break;
 
                     case 4:
+                        settings.LayoutCreationPreview(true);
                         /// name options
 
                         break;
 
                     case 5:
+                        settings.LayoutCreationPreview(true);
                         /// edge options
 
                         break;
@@ -310,6 +371,8 @@ namespace RPH
 
                     case -1:
                         choosing_layout_options = false;
+                        settings.LayoutCreationPreview(false);
+                        doc.Views.Redraw();
                         break;
 
 
@@ -367,7 +430,7 @@ namespace RPH
             return Result.Success;
         }
     }
-    public class RPHLayoutSettings
+    public class RPHLayoutSettings : ICloneable
     {
         // paper settings
         public string paper_size_name;
@@ -399,13 +462,17 @@ namespace RPH
         // attribute settings
         public ExtendedArchivableDictionary user_dictionary = new ExtendedArchivableDictionary();
 
+        // preview settings
+        DisplayConduitLayoutPreview layout_preview_display_conduit = new DisplayConduitLayoutPreview();
+
+
+
         // private variables
         // private Vector3d unit_x = new Vector3d(1, 0, 0);
         private Vector3d layout_x = new Vector3d(0, 0, 1);
 
         public RPHLayoutSettings()
         {
-            // default settings
             this.paper_size_name = "A3";
             this.paper_width = 420;
             this.paper_height = 297;
@@ -427,7 +494,16 @@ namespace RPH
             this.drawing_alt_name = "Default Drawing Alt Name";
             this.printing_edge = 3;
             this.drawing_edge = 10;
+            layout_preview_display_conduit.Enabled = false; //TODO _ ONLY FOR TESTS
+
+
             
+
+        }
+
+        public object Clone()
+        {
+            return this.MemberwiseClone();
         }
 
         public void SetPaperSize(int code)
@@ -561,7 +637,7 @@ namespace RPH
         public void SetLayoutPlane(Point3d origin, Vector3d x_axis)
         {
             this.layout_origin = origin;
-            this.layout_x = x_axis;
+            this.layout_x = Vector3d.ZAxis;
             UpdateLocalVariables();
         }
 
@@ -593,7 +669,7 @@ namespace RPH
             this.layout_origin = rectangle.PointAt(0);
             this.layout_x = new Vector3d(rectangle.PointAt(1) - rectangle.PointAt(0));
             //this.SetLayoutScaleOrigin(rectangle.Center);
-            this.SetLayoutPlane(this.layout_origin, this.layout_x);
+            this.SetLayoutPlane(this.layout_origin, Vector3d.ZAxis);
             UpdateLocalVariables();
         }
 
@@ -665,8 +741,8 @@ namespace RPH
 
         private void UpdateLayoutPlane()
         {
-            this.layout_plane = new Plane(this.layout_origin, this.layout_x);
-            this.layout_scale_plane = new Plane(this.layout_scale_origin, this.layout_x);
+            this.layout_plane = new Plane(this.layout_origin, Vector3d.ZAxis);
+            this.layout_scale_plane = new Plane(this.layout_scale_origin, Vector3d.ZAxis); // TODO TEST
         }
 
         private void UpdateModelDimensions()
@@ -677,8 +753,10 @@ namespace RPH
 
         private void UpdateLayoutBoundingBox()
         {
-            Transform scale = Transform.Scale(this.layout_scale_plane, model_width / Math.Abs(this.layout_boundingbox.X.Length), model_height / Math.Abs(this.layout_boundingbox.Y.Length) , 1);
-            this.layout_boundingbox.Transform(scale);
+            Transform scaling = Transform.Scale(this.layout_scale_plane, model_width / Math.Abs(this.layout_boundingbox.X.Length), model_height / Math.Abs(this.layout_boundingbox.Y.Length), 1);
+            
+            this.layout_boundingbox.Transform(scaling);
+            this.layout_preview_display_conduit.UpdatePreviewGeometry(this.layout_boundingbox);
         }
 
         private void UpdateUserDictionary()
@@ -687,9 +765,37 @@ namespace RPH
         }
 
 
-        public void DrawLayoutBoundingBox(RhinoDoc doc)
+        public Vector3d[] GetBoundingBoxRelativeRelativeTransformVectors(int justification)
         {
-            doc.Objects.AddRectangle(this.layout_boundingbox);
+            Point3d justified_origin = this.layout_boundingbox.Center;
+            switch (justification)
+            {
+                case 1:
+                    justified_origin = this.layout_boundingbox.PointAt(4);
+                    break;
+
+                case 2:
+                    justified_origin = this.layout_boundingbox.PointAt(1);
+                    break;
+
+                case 3:
+                    justified_origin = this.layout_boundingbox.PointAt(3);
+                    break;
+
+                case 4:
+                    justified_origin = this.layout_boundingbox.PointAt(2);
+                    break;
+            }
+            Vector3d vector_0 = new Vector3d(this.layout_boundingbox.PointAt(0) - justified_origin);
+            Vector3d vector_1 = new Vector3d(this.layout_boundingbox.PointAt(1) - justified_origin);
+            Vector3d vector_2 = new Vector3d(this.layout_boundingbox.PointAt(2) - justified_origin);
+            Vector3d vector_3 = new Vector3d(this.layout_boundingbox.PointAt(3) - justified_origin);
+            return new Vector3d[4] { vector_0, vector_1, vector_2, vector_3 };
+        }
+        public void LayoutCreationPreview(bool layout_creation_preview)
+        {
+            // TODO
+            this.layout_preview_display_conduit.Enabled = layout_creation_preview;
         }
 
     }
@@ -882,7 +988,7 @@ namespace RPH
         {
             while (true)
             {
-                option.Get();
+                option.GetMultiple(1, 0);
                 if (option.Result() == GetResult.Option)
                 {
                     this.result.Set("choice_index", 0);
@@ -911,7 +1017,8 @@ namespace RPH
     {
         BoundingBox box;
         public ObjectListBoundingBox(Rhino.DocObjects.ObjRef[] objrefs, bool accurate)
-        {
+        {   
+            
             GeometryBase geometry_base = objrefs[0].Geometry();
             box = geometry_base.GetBoundingBox(accurate);
 
@@ -928,7 +1035,78 @@ namespace RPH
         }
     }
 
+
+    public class DisplayConduitLayoutPreview : DisplayConduit
+    {
+        public Line[] lines;
+        public DisplayConduitLayoutPreview(Rectangle3d rectangle)
+        {
+            this.lines = rectangle.ToPolyline().GetSegments();
+        }
+
+        public DisplayConduitLayoutPreview()
+        {
+            this.lines = new Line[] { };
+        }
+
+        public DisplayConduitLayoutPreview(Line line)
+        {
+            this.lines = new Line[1] { line };
+        }
+
+        public DisplayConduitLayoutPreview(Line[] lines)
+        {
+            this.lines = lines;
+        }
+
+        public void UpdatePreviewGeometry(Rectangle3d rectangle)
+        {
+            this.lines = rectangle.ToPolyline().GetSegments();
+        }
+        
+        protected override void PostDrawObjects(DrawEventArgs e)
+        {   
+            if (this.lines.Length > 0)
+            {
+                for (int i = 0; i < this.lines.Length; i ++)
+                {
+                    LineCurve line_curve = new LineCurve(this.lines[i]);
+                    e.Display.DrawLine(line_curve.PointAtStart, line_curve.PointAtEnd, Color.White, 2);
+
+                }
+            }
+        }
+    }
+    
+
+    public class PluginConfig
+    {
+        private StringTable string_table;
+
+        public PluginConfig(RhinoDoc doc)
+        {
+            string_table = doc.Strings;
+        }
+
+        public bool DisplayLayoutCreationPreviews()
+        {
+            if (string_table.GetValue("RPH_display_layout_creation_previews") == "true")
+            {
+                return true;
+            }
+            string_table.SetString("RPH_display_layout_creation_previews", "false");
+            return false;
+        }
+
+    }
+
+
+
+
 }
+
+
+
 
 
 
