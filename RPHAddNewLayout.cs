@@ -61,15 +61,11 @@ namespace RPH
 
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {
-
-            Rhino.Display.RhinoPageView[] page_views = doc.Views.GetPageViews();
-
-            Boolean choosing_layout_options = true;
-
+            bool choosing_layout_options = true;
+            bool commit_layout_creation = true;
             // ask for options
 
             RPHLayoutSettings settings = new RPHLayoutSettings();
-
 
             while (choosing_layout_options)
             {
@@ -94,10 +90,12 @@ namespace RPH
                 List<string> layout_options_name_defaults = new List<string> { settings.layout_name, settings.drawing_name, settings.drawing_alt_name };
 
                 Point3d point = new Point3d(0, 0, 0);
+                int bounding_box_mode = 2;
 
-                
 
-                        
+
+
+
 
                 GetOption options_dialog_general = new GetOption();
                 LayoutOptionDialog layout_options_dialog_general = new LayoutOptionDialog(options_dialog_general, "Layout Settings:", layout_options_general, layout_options_general_defaults);
@@ -209,19 +207,31 @@ namespace RPH
                                 doc.Views.Redraw();
                                 break;
 
-                               
-
                             case 2:
+                                bool choosing_content_objects = true;
+
                                 settings.LayoutCreationPreview(false);
 
                                 GetObject options_dialog_objects = new GetObject();
                                 options_dialog_objects.GeometryFilter = Rhino.DocObjects.ObjectType.Point | Rhino.DocObjects.ObjectType.Curve | Rhino.DocObjects.ObjectType.PointSet;
-                                
-                                LayoutOptionDialog layout_options_dialog_objects = new LayoutOptionDialog(options_dialog_objects, "Pick Content Objects");
-                                int bounding_box_mode_index = layout_options_dialog_objects.DialogResult().Getint("choice_index", 2);
-                                bool accurate = false;
 
-                                // TODO OPTIONS AND NULL HANDLING
+                                LayoutOptionDialog layout_options_dialog_objects = new LayoutOptionDialog(options_dialog_objects, "Pick Content Objects"
+                                    /*, new List<string> { "Bounding_Box_Mode" }*/
+                                    );
+                                int content_objects_choice_index = layout_options_dialog_objects.DialogResult().Getint("choice_index", -1);
+                                /*
+                                if (content_objects_choice_index == 0)
+                                {
+                                    GetOption options_dialog_bounding_box_mode = new GetOption();
+                                    LayoutOptionDialog layout_options_dialog_bounding_box_mode = new LayoutOptionDialog(options_dialog_bounding_box_mode, "Specify Bounding Box Mode", new List<string> { "Accurate", "Coarse" });
+                                    if (layout_options_dialog_bounding_box_mode.DialogResult().Getint("choice_index", -1) != -1)
+                                    {
+                                        bounding_box_mode = layout_options_dialog_bounding_box_mode.DialogResult().Getint("choice_index", -1);
+                                    }
+                                }
+                                */
+
+                                bool accurate = false;
 
                                 ObjectListBoundingBox Box = new ObjectListBoundingBox(options_dialog_objects.Objects(), accurate);
                                 BoundingBox box = Box.Box();
@@ -232,6 +242,7 @@ namespace RPH
 
                                 settings.LayoutCreationPreview(true);
                                 doc.Views.Redraw();
+
 
                                 break;
 
@@ -360,12 +371,15 @@ namespace RPH
                         settings.LayoutCreationPreview(true);
                         /// name options
 
+
+                        doc.Views.Redraw();
                         break;
 
                     case 5:
                         settings.LayoutCreationPreview(true);
                         /// edge options
 
+                        doc.Views.Redraw();
                         break;
 
 
@@ -375,44 +389,40 @@ namespace RPH
                         doc.Views.Redraw();
                         break;
 
-
-
+                    default:
+                        choosing_layout_options = false;
+                        doc.Views.Redraw();
+                        break;
                 }
 
-                // fix
-                //layout_options.AddOptionEnumList("General Layout Options:", );
 
-                
+            }
+            settings.LayoutCreationPreview(true);
+            doc.Views.Redraw();
+            GetOption options_dialog_commit = new GetOption();
+            options_dialog_commit.AcceptEnterWhenDone(true);
+            options_dialog_commit.AcceptNothing(true);
+            LayoutOptionDialog layout_options_dialog_commit = new LayoutOptionDialog(options_dialog_commit, "Previewing ... Commit Changes?", new List<string> { "Yes", "No" });
+            if (layout_options_dialog_commit.DialogResult().Getint("choice_index", -1) > 1 | layout_options_dialog_commit.DialogResult().Getint("choice_index", -1) < 0)
+            {
+                settings.LayoutCreationPreview(false);
+                doc.Views.Redraw();
+                return Result.Cancel;
 
-                //GetResult result = layout_options.Get();
-                //string msg = layout_options.OptionIndex().ToString();
-
-
-                
-                // ask for page size
-
-
-
-
-                // ask for position
-
-
-
-                // ask for justification
-                
+            }
+            else
+            {
+                commit_layout_creation = true;
+                choosing_layout_options = false;
             }
 
+            if (commit_layout_creation)
+            {
+                settings.AddLayout(doc);
+            }
 
-
-
-
-
-
-
-
-
-
-
+            settings.LayoutCreationPreview(false);
+            doc.Views.Redraw();
 
 
             // check whether all existing layouts are created with RPH
@@ -444,6 +454,7 @@ namespace RPH
 
         // layout settings
         public int layout_id;
+        public Guid layout_guid;
         public string layout_name;
         public Point3d layout_origin;
         public Point3d layout_scale_origin;
@@ -460,7 +471,9 @@ namespace RPH
         public double drawing_edge;
 
         // attribute settings
-        public ExtendedArchivableDictionary user_dictionary = new ExtendedArchivableDictionary();
+        public ExtendedArchivableDictionary extended_user_dictionary = new ExtendedArchivableDictionary();
+        public ArchivableDictionary user_dictionary = new ArchivableDictionary();
+
 
         // preview settings
         DisplayConduitLayoutPreview layout_preview_display_conduit = new DisplayConduitLayoutPreview();
@@ -483,7 +496,8 @@ namespace RPH
             this.drawing_elements_scaling = true;
 
             this.layout_id = 0;
-            this.layout_name = "Default Layout";
+            this.layout_guid = Guid.NewGuid();
+            this.layout_name = "L_" + this.layout_guid.ToString().Substring(0, 4);
             this.layout_origin = new Point3d(0, 0, 0);
             this.layout_scale_origin = new Point3d(0, 0, 0);
             UpdateLayoutPlane();
@@ -496,7 +510,8 @@ namespace RPH
             this.drawing_edge = 10;
             layout_preview_display_conduit.Enabled = false; //TODO _ ONLY FOR TESTS
 
-
+            //TEST?
+            UpdateLocalVariables();
             
 
         }
@@ -761,7 +776,8 @@ namespace RPH
 
         private void UpdateUserDictionary()
         {
-            user_dictionary.SetLayoutSetting(this);
+            extended_user_dictionary.SetLayoutSetting(this);
+            extended_user_dictionary.AddContentsFrom(GenerateArchivableDictionary());
         }
 
 
@@ -794,8 +810,76 @@ namespace RPH
         }
         public void LayoutCreationPreview(bool layout_creation_preview)
         {
-            // TODO
+            // TODO - ADD ANNOTATIONS AND TEXTS <- CONDUIT CLASS
             this.layout_preview_display_conduit.Enabled = layout_creation_preview;
+        }
+
+        public void AddLayout(RhinoDoc doc)
+        {
+            // TODO
+            UpdateLocalVariables();
+            
+            RhinoPageView[] page_views = doc.Views.GetPageViews();
+            List<Guid> layout_guids = new List<Guid>();
+
+
+
+
+
+            doc.PageUnitSystem = UnitSystem.Millimeters;
+
+            RhinoPageView layout = doc.Views.AddPageView(this.layout_name, paper_width, paper_height);
+            Point2d top_left = new Point2d(0, paper_height);
+            Point2d bottom_right = new Point2d(paper_width, 0);
+            Rhino.DocObjects.DetailViewObject detail = layout.AddDetailView(drawing_name, top_left, bottom_right, DefinedViewportProjection.Top);
+
+            layout.SetActiveDetail(detail.Id);
+            Point3d center = new Point3d(0.5 * model_width, 0.5 * model_height, 0);
+            detail.Viewport.SetCameraLocation(center, true);
+            detail.Viewport.SetCameraTarget(center, true);
+            detail.CommitViewportChanges();
+            detail.DetailGeometry.IsProjectionLocked = true;
+            detail.DetailGeometry.SetScale(scale / 1000, doc.ModelUnitSystem, 1, doc.PageUnitSystem);
+
+            detail.Attributes.UserDictionary.AddContentsFrom(user_dictionary);
+            detail.CommitChanges();
+
+
+            layout.SetPageAsActive();
+            doc.Views.ActiveView = layout;
+            doc.Views.Redraw();
+
+
+        }
+
+        public ArchivableDictionary GenerateArchivableDictionary()
+        {
+            // TODO - EXPERIMENTAL METHOD
+            user_dictionary.Set("paper_size_name", paper_size_name);
+            user_dictionary.Set("paper_width", paper_width);
+            user_dictionary.Set("paper_height", paper_height);
+            user_dictionary.Set("is_landscape", is_landscape);
+
+            user_dictionary.Set("scale", scale);
+            user_dictionary.Set("drawing_elements_scaling", drawing_elements_scaling);
+
+            user_dictionary.Set("layout_guid", layout_guid);
+            user_dictionary.Set("layout_id", layout_id);
+            user_dictionary.Set("layout_name", layout_name);
+            user_dictionary.Set("layout_origin", layout_origin);
+            user_dictionary.Set("layout_scale_origin", layout_scale_origin);
+            user_dictionary.Set("layout_plane", layout_plane);
+            user_dictionary.Set("layout_scale_plane", layout_scale_plane);
+            user_dictionary.Set("model_width", model_width);
+            user_dictionary.Set("model_height", model_height);
+            user_dictionary.Set("layout_boundingbox", new RectangleF((float)layout_boundingbox.PointAt(0).X, (float)layout_boundingbox.PointAt(0).Y, (float)model_width, (float)model_height));
+
+            user_dictionary.Set("drawing_name", drawing_name);
+            user_dictionary.Set("drawing_alt_name", drawing_alt_name);
+            user_dictionary.Set("printing_edge", printing_edge);
+            user_dictionary.Set("drawing_edge", drawing_edge);
+
+            return extended_user_dictionary;
         }
 
     }
@@ -882,6 +966,12 @@ namespace RPH
             Get(option);
         }
 
+        public LayoutOptionDialog(GetString option, string msg)
+        {
+            option.SetCommandPrompt(msg);
+            Get(option);
+        }
+
         public LayoutOptionDialog(GetPoint option, string msg)
         {
             option.SetCommandPrompt(msg);
@@ -923,6 +1013,7 @@ namespace RPH
             while (true)
             {
                 option.Get();
+
                 if (option.Result() == GetResult.Option)
                 {
                     this.result.Set("choice_index" , option.Option().Index);
@@ -931,6 +1022,11 @@ namespace RPH
                 if (option.Result() == GetResult.Cancel)
                 {
                     this.result.Set("choice_index", -1);
+                    break;
+                }
+                if ((option.Result() == GetResult.Nothing) | (option.Result() == GetResult.NoResult))
+                {
+                    this.result.Set("choice_index", 0);
                     break;
                 }
             }
@@ -955,6 +1051,30 @@ namespace RPH
                 {
                     this.result.Set("choice_index", 1);
                     this.result.Set("result", option.Point());
+                    break;
+                }
+            }
+        }
+
+        private void Get(GetString option)
+        {
+            while (true)
+            {
+                option.Get();
+                if (option.Result() == GetResult.Option)
+                {
+                    this.result.Set("choice_index", 0);
+                    break;
+                }
+                if (option.Result() == GetResult.Cancel)
+                {
+                    this.result.Set("choice_index", -1);
+                    break;
+                }
+                if (option.Result() == GetResult.String)
+                {
+                    this.result.Set("choice_index", 1);
+                    this.result.Set("result", option.StringResult());
                     break;
                 }
             }
@@ -1018,6 +1138,7 @@ namespace RPH
         BoundingBox box;
         public ObjectListBoundingBox(Rhino.DocObjects.ObjRef[] objrefs, bool accurate)
         {   
+            
             
             GeometryBase geometry_base = objrefs[0].Geometry();
             box = geometry_base.GetBoundingBox(accurate);
@@ -1098,6 +1219,9 @@ namespace RPH
             return false;
         }
 
+
+
+        
     }
 
 
