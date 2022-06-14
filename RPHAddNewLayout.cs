@@ -30,12 +30,12 @@ public enum layout_options_name
     drawing_alternative_name
 }
 
+//FUTURE
 public enum layout_options_edge
 {
     drawing_edge_mm,
     printing_edge_mm
 }
-
 
 
 namespace RPH
@@ -71,7 +71,9 @@ namespace RPH
             {
                 settings.LayoutCreationPreview(true);
 
-                List<string> layout_options_general = new List<string> { "Position", "Paper", "Scale", "Name", "Edge", "User_Attributes" };
+                // List<string> layout_options_general = new List<string> { "Position", "Paper", "Scale", "Name", "Edge", "User_Attributes" };
+                List<string> layout_options_general = new List<string> { "Position", "Paper", "Scale", "Name", "Use_Last"};
+
                 List<string> layout_options_general_defaults = new List<string> { "", settings.paper_size_name, String.Format("1:{0}", settings.scale), "", "", "" };
 
                 List<string> layout_options_position = new List<string> { "From_Point", "From_Content_Objects" };
@@ -376,9 +378,14 @@ namespace RPH
                         break;
 
                     case 5:
-                        settings.LayoutCreationPreview(true);
-                        /// edge options
 
+                        /// use last
+                        doc.Views.Redraw();
+                        settings.LayoutCreationPreview(false);
+
+                        settings = new RPHLayoutSettings(); //LOAD USERSTRING HERE TO RESTORE LAST SETTINGS, SAVE SETTINGS INTO RHINO USERSTRING IN RPHLayoutSettings CLASS
+                        
+                        settings.LayoutCreationPreview(true);
                         doc.Views.Redraw();
                         break;
 
@@ -506,8 +513,8 @@ namespace RPH
 
             this.drawing_name = "Default Drawing";
             this.drawing_alt_name = "Default Drawing Alt Name";
-            this.printing_edge = 3;
-            this.drawing_edge = 10;
+            this.printing_edge = 3; //FUTURE
+            this.drawing_edge = 10; //FUTURE
             layout_preview_display_conduit.Enabled = false; //TODO _ ONLY FOR TESTS
 
             //TEST?
@@ -520,6 +527,12 @@ namespace RPH
         {
             return this.MemberwiseClone();
         }
+
+        public void StoreToUserStringTable()
+        {
+            // TODO
+        }
+
 
         public void SetPaperSize(int code)
         {
@@ -713,12 +726,14 @@ namespace RPH
             UpdateLocalVariables();
         }
 
+        //FUTURE
         public void SetPrintingEdge(double edge)
         {
             this.printing_edge = edge;
             UpdateLocalVariables();
         }
 
+        //FUTURE
         public void SetDrawingEdge(double edge)
         {
             this.drawing_edge = edge;
@@ -834,7 +849,7 @@ namespace RPH
             Rhino.DocObjects.DetailViewObject detail = layout.AddDetailView(drawing_name, top_left, bottom_right, DefinedViewportProjection.Top);
 
             layout.SetActiveDetail(detail.Id);
-            Point3d center = new Point3d(0.5 * model_width, 0.5 * model_height, 0);
+            Point3d center = this.layout_boundingbox.Center;
             detail.Viewport.SetCameraLocation(center, true);
             detail.Viewport.SetCameraTarget(center, true);
             detail.CommitViewportChanges();
@@ -876,8 +891,8 @@ namespace RPH
 
             user_dictionary.Set("drawing_name", drawing_name);
             user_dictionary.Set("drawing_alt_name", drawing_alt_name);
-            user_dictionary.Set("printing_edge", printing_edge);
-            user_dictionary.Set("drawing_edge", drawing_edge);
+            user_dictionary.Set("printing_edge", printing_edge); //FUTURE
+            user_dictionary.Set("drawing_edge", drawing_edge); //FUTURE
 
             return extended_user_dictionary;
         }
@@ -903,23 +918,7 @@ namespace RPH
 
     }
 
-    /*
-    public class GenericArchivableDictionary<T> : ArchivableDictionary where T: Getba
-    {
-        private T t;
-
-        public void SetDialogOption(T dialog_option)
-        {
-            this.t = dialog_option;
-        }
-
-        public T GetDialogOption()
-        {
-            return this.t;
-        }
-    }
-    */
-
+   
     public class LayoutOptionDialog
     {
         //private GetOption option = new Rhino.Input.Custom.GetOption();
