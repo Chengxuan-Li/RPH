@@ -66,6 +66,7 @@ namespace RPH
             // ask for options
 
             RPHLayoutSettings settings = new RPHLayoutSettings();
+            
 
             while (choosing_layout_options)
             {
@@ -103,7 +104,8 @@ namespace RPH
                 LayoutOptionDialog layout_options_dialog_general = new LayoutOptionDialog(options_dialog_general, "Layout Settings:", layout_options_general, layout_options_general_defaults);
                 int general_choice_index = layout_options_dialog_general.DialogResult().Getint("choice_index", -1);
 
-                
+
+
                 switch(general_choice_index)
                 {
                     case 1:
@@ -383,7 +385,9 @@ namespace RPH
                         doc.Views.Redraw();
                         settings.LayoutCreationPreview(false);
 
-                        settings = new RPHLayoutSettings(); //LOAD USERSTRING HERE TO RESTORE LAST SETTINGS, SAVE SETTINGS INTO RHINO USERSTRING IN RPHLayoutSettings CLASS
+                        settings = new RPHLayoutSettings(); /// LOAD USERSTRING HERE TO RESTORE LAST SETTINGS, SAVE SETTINGS INTO RHINO USERSTRING IN RPHLayoutSettings CLASS
+                        settings.ReadFromUserStringTable(doc);
+                        
                         
                         settings.LayoutCreationPreview(true);
                         doc.Views.Redraw();
@@ -443,12 +447,15 @@ namespace RPH
             // add detail view
 
             // adjust detail view position and scale
-
+            settings.StoreToUserStringTable(doc); /// EXPERIMENTAL
             return Result.Success;
         }
     }
     public class RPHLayoutSettings : ICloneable
     {
+        // general built-in
+        String section_name = "RPHAddlayoutLastAttempt";
+
         // paper settings
         public string paper_size_name;
         public double paper_width;
@@ -528,9 +535,81 @@ namespace RPH
             return this.MemberwiseClone();
         }
 
-        public void StoreToUserStringTable()
+        public void StoreToUserStringTable(RhinoDoc doc)
         {
             // TODO
+            
+            StringTable string_table = doc.Strings;
+            string_table.SetString(section_name, "paper_width", this.paper_width.ToString());
+            string_table.SetString(section_name, "paper_height", this.paper_height.ToString());
+            string_table.SetString(section_name, "scale", this.scale.ToString());
+            string_table.SetString(section_name, "origin", this.layout_origin.ToString());
+            string_table.SetString(section_name, "scale_origin", this.layout_scale_origin.ToString());
+            
+
+        }
+
+
+        public void ReadFromUserStringTable(RhinoDoc doc)
+        {
+            StringTable string_table = doc.Strings;
+
+            String[] entry_names = string_table.GetEntryNames(section_name);
+            bool table_has_width = false;
+            bool table_has_height = false;
+            bool table_has_scale = false;
+            bool table_has_origin = false;
+            bool table_has_scale_origin = false;
+
+            foreach (string entry_name in entry_names)
+            {
+                if (entry_name.Equals("paper_width"))
+                {
+                    table_has_width = true;
+                }
+                if (entry_name.Equals("paper_height"))
+                {
+                    table_has_height = true;
+                }
+                if (entry_name.Equals("scale"))
+                {
+                    table_has_scale = true;
+                }
+                if (entry_name.Equals("origin"))
+                {
+                    table_has_origin = true;
+                }
+                if (entry_name.Equals("scale_origin"))
+                {
+                    table_has_scale_origin = true;
+                }
+            }
+
+            if (table_has_width && table_has_height)
+            {
+                this.SetPaperSize(Double.Parse(string_table.GetValue(section_name, "paper_width")), Double.Parse(string_table.GetValue(section_name, "paper_height")));
+            }
+            if (table_has_scale)
+            {
+                this.SetScale(Double.Parse(string_table.GetValue(section_name, "scale")));
+            }
+            /*if (table_has_origin)
+            {
+                this.SetLayoutOrigin(
+                    Double.Parse(string_table.GetValue(section_name, "origin").Split(new[] { ',' })[0]),
+                    Double.Parse(string_table.GetValue(section_name, "origin").Split(new[] { ',' })[1])
+                    );
+           
+            }
+            if (table_has_scale_origin)
+            {
+                this.SetLayoutScaleOrigin(
+                    Double.Parse(string_table.GetValue(section_name, "scale_origin").Split(new[] { ',' })[0]),
+                    Double.Parse(string_table.GetValue(section_name, "scale_origin").Split(new[] { ',' })[1])
+                    );
+            }*/
+
+
         }
 
 
@@ -588,7 +667,7 @@ namespace RPH
         {
             this.paper_width = width;
             this.paper_height = height;
-            this.paper_size_name = string.Format("{0}mm_x_{1}mm_User_Defined_Paper", this.paper_width, this.paper_height);
+            this.paper_size_name = string.Format("{0}mm_x_{1}mm_paper", this.paper_width, this.paper_height);
             UpdateLocalVariables();
         }
 
@@ -636,6 +715,8 @@ namespace RPH
         {
             this.layout_scale_origin = (Point3d)(this.layout_scale_origin + origin - this.layout_origin);
             this.layout_origin = origin;
+            // this.SetLayoutPlane(this.layout_origin, Vector3d.ZAxis);
+            /// TODO this is not effective?
             UpdateLocalVariables();
         }
 
