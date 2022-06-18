@@ -1,8 +1,10 @@
 ﻿# RPH / RhinoPlotHelper
-This is a plugin for Rhinoceros 6 that helps to create document layouts.
-It will support batch print-to-file, layout editing, layout objects preset, and more.
+This is a plugin for Rhinoceros 6 (SR18+) and 7 that helps to create document layouts.
+It will support batch print-to-file, layout editing, layout objects preset, and more in the future.
 
-## Rhino Commands (Future Deployments to be Included)
+For instructions on the installation of the plugin, see https://github.com/Chengxuan-Li/RPH/releases/tag/v0.1.0
+
+## Rhino Commands Available at the Moment
 
 ### RPHAddNewLayout
 
@@ -25,11 +27,14 @@ After selection, the paper size will change automatically to fit the selected ob
 
 #### Paper
 
+``<Name>`` option the following options: ``<ISO Paper>``, ``Orientation``, ``<Custom Paper>``, allowing for the speficification of paper sizes and orientations respectively.
+
 #### Scale
+
+``<Name>`` option allows the user to specify the drawing scale (detail view scale) of the layout.
 
 #### Name
 
-#### Edge
+``<Name>`` option allows the user to enter a custom name for the layout to be created. If it is not specified, the layout name will be marked with the first four characters of its GUID (Globally Unique Identifier)
 
-#### User_Attributes
 
